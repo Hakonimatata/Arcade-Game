@@ -33,7 +33,7 @@ void loop() {
   // Game starts. TODO: green LED when starting?
   while(!hammerDown) {
     
-    int randInt = random(1, 50);
+    int randInt = random(1, 100);
 
     if (randInt == 1) {
       swingHammer();
@@ -53,20 +53,25 @@ void loop() {
       }
     }
 
-    delay(100); 
+    delay(50); 
   }
-  // Game is done. Display red indicator if player got fooled
-  // Remember to reset hammer to start position
 
+  // Game is done. Print results
+  
+  Serial.println("Game over");
+
+  if(playerFooled) {
+    Serial.println("You got fooled!");
+  }
+
+  // Return hammer to start pos
   delay(1000);
   hammer.write(hammerStartPos);
-
-  Serial.println("Game over");
 
   // Reset parameters
   hammerDown = false;
   playerFooled = false;
-
+  delay(1000);
 }
 
 
@@ -87,4 +92,3 @@ void fakeSwing() {
   Serial.println("Fake swing");
 
 }
-
