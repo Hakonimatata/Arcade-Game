@@ -18,6 +18,7 @@ unsigned long randNumber;
 unsigned long swingTime;
 unsigned long reactionTime;
 
+
 void setup() {
   Serial.begin(9600);
 
@@ -32,18 +33,35 @@ void setup() {
 
 void loop() {
 
+  waitForPlayer();
+
+  // Game starts. TODO: green LED when starting?
+  playGame();
+
+  // Game is done. Print results
+  printResults();
+  delay(1000);
+
+  // Reset all parameters
+  resetGame();
+  delay(1000);
+}
+
+void waitForPlayer() {
   while (!isButtonDown()) { // Wait for button to be pressed
     hammerStartPos = readPotentiometerPosition();
     hammer.write(hammerStartPos);
     delay(100);
   }
+}
 
-  // Game starts. TODO: green LED when starting?
+void playGame() {
+  
   while(true) {
     
     randNumber = random(1, 5000);
 
-    if (randNumber == 1) {
+    if (randNumber == 1 && !hammerDown) {
       if(isFake()) {
         fakeSwing();
       }
@@ -66,14 +84,8 @@ void loop() {
 
     delay(1); 
   }
-
-  // Game is done. Print results
-  printResults();
-  delay(1000);
-
-  resetGame();
-  delay(1000);
 }
+
 
 
 void printResults() {
