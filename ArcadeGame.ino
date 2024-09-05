@@ -9,7 +9,7 @@ const int potentiometerPin = A0;
 
 // tunable parameters: 
 int hammerStartPos = 0; // deg angle
-int hammerEndPos = 60;
+int hammerEndPos = 90;
 
 
 bool hammerDown = false;
@@ -57,6 +57,8 @@ void waitForPlayer() {
 
 void playGame() {
   
+  Serial.println("Starting Game");
+
   while(true) {
     
     randNumber = random(1, 5000);
