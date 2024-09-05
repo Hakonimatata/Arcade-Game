@@ -1,14 +1,18 @@
 #include <Servo.h>
 
-Servo hammer;
+Servo hammer; // Init servo object
 
+// init pins:
 int buttonPin = 6;
+int potentiometerPin = A0;
+
+// tunable parameters: 
 int hammerStartPos = 0; // deg angle
 int hammerEndPos = 60;
 
+
 bool hammerDown = false;
 bool playerFooled = false;
-
 unsigned long randNumber;
 
 void setup() {
@@ -27,7 +31,9 @@ void loop() {
 
   while (digitalRead(buttonPin) == HIGH) {
     // Wait for button to be pressed
-    delay(200);
+    hammerStartPos = updateHammerStartPos();
+    hammer.write(hammerStartPos);
+    delay(100);
   }
 
   // Game starts. TODO: green LED when starting?
@@ -36,11 +42,14 @@ void loop() {
     int randInt = random(1, 100);
 
     if (randInt == 1) {
-      swingHammer();
+      if(isFake()) {
+        fakeSwing();
+      }
+      else {
+        swingHammer();
+      }
     }
-    else if (randInt == 2) {
-      fakeSwing();
-    }
+    
 
     // Check if button is released
     if(digitalRead(buttonPin) == HIGH) { // button released
@@ -90,5 +99,10 @@ void fakeSwing() {
   delay(100);
   hammer.write(hammerStartPos);
   Serial.println("Fake swing");
+}
 
+int updateHammerStartPos() {
+  int potentiometerVal = analogRead(potentiometerPin);
+  int scaledVal = map(potentiometerVal, 0, 1023, 0, 60); // Potentiometer from 0 to 60 deg
+  return scaledVal;
 }
