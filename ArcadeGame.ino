@@ -33,7 +33,7 @@ void setup() {
   hammer.write(hammerStartPos);  // Set hammer to start position
 
   myOLED.begin();
-
+  myOLED.setFont(SmallFont);
 }
 
 
@@ -57,6 +57,9 @@ void waitForPlayer() {
   while (!isButtonDown()) { // Wait for button to be pressed
     hammerStartPos = readPotentiometerPosition();
     hammer.write(hammerStartPos);
+
+    printOLED("Difficulty: ", hammerStartPos, "Score", 0);
+
     delay(100);
   }
 }
