@@ -1,4 +1,9 @@
 #include <Servo.h>
+#include <OLED_I2C.h>
+extern uint8_t SmallFont[];
+
+
+OLED  myOLED(SDA, SCL);
 
 Servo hammer; // Init servo object
 
@@ -18,7 +23,6 @@ unsigned long randNumber;
 unsigned long swingTime;
 unsigned long reactionTime;
 
-
 void setup() {
   Serial.begin(9600);
 
@@ -27,6 +31,8 @@ void setup() {
   randomSeed(analogRead(0)); // Set seed for random() function
   hammer.attach(servoPin);  // Set servo to use pin 9
   hammer.write(hammerStartPos);  // Set hammer to start position
+
+  myOLED.begin();
 
 }
 
@@ -140,4 +146,13 @@ int readPotentiometerPosition() {
 
 bool isButtonDown() {
   return digitalRead(buttonPin) == LOW;
+}
+
+void printOLED(String item1, int item2, String item3, int item4){
+  myOLED.clrScr();
+  myOLED.print(item1, CENTER, 0);
+  myOLED.print(String(item2) + "%", CENTER, 16);
+  myOLED.print(item3, CENTER, 32);
+  myOLED.print(String(item4) + " ms", CENTER, 48);
+  myOLED.update();
 }
