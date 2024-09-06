@@ -2,9 +2,7 @@
 #include <OLED_I2C.h>
 extern uint8_t SmallFont[];
 
-
-OLED  myOLED(SDA, SCL);
-
+OLED myOLED(SDA, SCL); // Init oled screen
 Servo hammer; // Init servo object
 
 // Hei
@@ -12,17 +10,19 @@ Servo hammer; // Init servo object
 const int buttonPin = 6;
 const int servoPin = 9;
 const int potentiometerPin = A0;
+const int minStartAngle = 0;
+const int maxStartAngle = 90;
 
 // tunable parameters: 
 int hammerStartPos = 0; // deg angle
-int hammerEndPos = 90;
-
+int hammerEndPos = 110;
 
 bool hammerDown = false;
 bool playerFooled = false;
 unsigned long randNumber;
 unsigned long swingTime;
 unsigned long reactionTime;
+unsigned long bestReactionTime = 999999;
 
 void setup() {
   Serial.begin(9600);
@@ -34,16 +34,19 @@ void setup() {
   hammer.write(hammerStartPos);  // Set hammer to start position
 
   myOLED.begin();
-
+  myOLED.setFont(SmallFont);
 }
 
 
 void loop() {
-
+  // Wait for player to start
   waitForPlayer();
 
   // Game starts. TODO: green LED when starting?
   playGame();
+
+  // Update high score
+  updateHighScore();
 
   // Game is done. Print results
   printResults();
@@ -59,28 +62,29 @@ void waitForPlayer() {
     hammerStartPos = readPotentiometerPosition();
     hammer.write(hammerStartPos);
 
+    printOLED("Difficulty (degrees): ", String(hammerStartPos), "Hold button to start", "");
 
-    int signal = analogRead(potentiometerPin);
-    Serial.println(signal);
-
-    delay(100);
+    delay(10);
   }
 }
 
 void playGame() {
-  
+
+  printOLED("Game started", "", "", "");
+
   Serial.println("Starting Game");
+  delay(1000); // delay before the hammer has a chance to start
 
   while(true) {
     
-    randNumber = random(1, 5000);
+    randNumber = random(1, 1000);
 
     if (randNumber == 1 && !hammerDown) {
-      if(isFake()) {
-        fakeSwing();
+      if(isRealSwing()) {
+        swingHammer();
       }
       else {
-        swingHammer();
+        fakeSwing();
       }
     }
     
@@ -100,14 +104,22 @@ void playGame() {
   }
 }
 
-
+void updateHighScore() {
+  if (reactionTime < bestReactionTime) {
+    bestReactionTime = reactionTime;
+  }
+}
 
 void printResults() {
   Serial.println("Game over");
 
   if(playerFooled) {
+    printOLED("You got fooled!", "dumbass", "", "");
+    
     Serial.println("You got fooled!");
   } else {
+    printOLED("Your reaction time is", String(reactionTime) + "ms", "", "Best time: " + String(bestReactionTime) + " ms");
+
     Serial.print("Reaction Time: ");
     Serial.print(reactionTime);
     Serial.println(" ms");
@@ -126,8 +138,8 @@ void resetGame() {
 }
 
 
-bool isFake() {
-  return random(0, 2) == 1; // generates either 0 or 1. 50% chance
+bool isRealSwing() {
+  return random(0, 4) == 1; // generates 0 - 3. 1/4 chance
 }
 
 void swingHammer() {
@@ -138,7 +150,7 @@ void swingHammer() {
 }
 
 void fakeSwing() {
-  hammer.write(hammerStartPos + 4);
+  hammer.write(hammerStartPos + 10);
   delay(100);
   hammer.write(hammerStartPos);
   Serial.println("Fake swing");
@@ -146,19 +158,19 @@ void fakeSwing() {
 
 int readPotentiometerPosition() {
   int potentiometerVal = analogRead(potentiometerPin);
-  int scaledVal = map(potentiometerVal, 0, 1023, 0, 60); // Potentiometer from 0 to 60 deg
+  int scaledVal = map(potentiometerVal, 0, 1023, minStartAngle, maxStartAngle);
   return scaledVal;
 }
 
 bool isButtonDown() {
-  return digitalRead(buttonPin) == LOW;
+  return digitalRead(buttonPin) == HIGH; // Set to high because button is normally down
 }
 
-void printOLED(String item1, int item2, String item3, int item4){
+void printOLED(String item1, String item2, String item3, String item4){
   myOLED.clrScr();
   myOLED.print(item1, CENTER, 0);
-  myOLED.print(String(item2) + "%", CENTER, 16);
+  myOLED.print(item2, CENTER, 16);
   myOLED.print(item3, CENTER, 32);
-  myOLED.print(String(item4) + " ms", CENTER, 48);
+  myOLED.print(item4, CENTER, 48);
   myOLED.update();
 }
