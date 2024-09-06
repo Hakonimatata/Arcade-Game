@@ -2,6 +2,7 @@
 
 Servo hammer; // Init servo object
 
+// Hei
 // pins:
 const int buttonPin = 6;
 const int servoPin = 9;
@@ -51,6 +52,11 @@ void waitForPlayer() {
   while (!isButtonDown()) { // Wait for button to be pressed
     hammerStartPos = readPotentiometerPosition();
     hammer.write(hammerStartPos);
+
+
+    int signal = analogRead(potentiometerPin);
+    Serial.println(signal);
+
     delay(100);
   }
 }
