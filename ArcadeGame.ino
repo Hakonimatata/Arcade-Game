@@ -14,7 +14,7 @@ const int potentiometerPin = A0;
 
 // tunable parameters: 
 int hammerStartPos = 0; // deg angle
-int hammerEndPos = 90;
+int hammerEndPos = 110;
 
 
 bool hammerDown = false;
@@ -58,26 +58,29 @@ void waitForPlayer() {
     hammerStartPos = readPotentiometerPosition();
     hammer.write(hammerStartPos);
 
-    printOLED("Difficulty: ", hammerStartPos, "Score", 0);
+    printOLED("Difficulty (degrees): ", hammerStartPos, "Hold button to start");
 
-    delay(100);
+    delay(10);
   }
 }
 
 void playGame() {
   
+
   Serial.println("Starting Game");
+  delay(1000); // delay before the hammer has a chance to start
+
 
   while(true) {
     
-    randNumber = random(1, 5000);
+    randNumber = random(1, 1000);
 
     if (randNumber == 1 && !hammerDown) {
-      if(isFake()) {
-        fakeSwing();
+      if(isRealSwing()) {
+        swingHammer();
       }
       else {
-        swingHammer();
+        fakeSwing();
       }
     }
     
@@ -103,8 +106,13 @@ void printResults() {
   Serial.println("Game over");
 
   if(playerFooled) {
+    printOLED("You got fooled!", 0, "" );
+
     Serial.println("You got fooled!");
   } else {
+
+    //printOLED(String item1, int item2, String item3)
+
     Serial.print("Reaction Time: ");
     Serial.print(reactionTime);
     Serial.println(" ms");
@@ -123,8 +131,8 @@ void resetGame() {
 }
 
 
-bool isFake() {
-  return random(0, 2) == 1; // generates either 0 or 1. 50% chance
+bool isRealSwing() {
+  return random(0, 4) == 1; // generates 0 - 3. 1/4 chance
 }
 
 void swingHammer() {
@@ -135,7 +143,7 @@ void swingHammer() {
 }
 
 void fakeSwing() {
-  hammer.write(hammerStartPos + 4);
+  hammer.write(hammerStartPos + 10);
   delay(100);
   hammer.write(hammerStartPos);
   Serial.println("Fake swing");
@@ -143,19 +151,19 @@ void fakeSwing() {
 
 int readPotentiometerPosition() {
   int potentiometerVal = analogRead(potentiometerPin);
-  int scaledVal = map(potentiometerVal, 0, 1023, 0, 60); // Potentiometer from 0 to 60 deg
+  int scaledVal = map(potentiometerVal, 0, 1023, 0, 100); // Potentiometer from 0 to 60 deg
   return scaledVal;
 }
 
 bool isButtonDown() {
-  return digitalRead(buttonPin) == LOW;
+  return digitalRead(buttonPin) == HIGH;
 }
 
-void printOLED(String item1, int item2, String item3, int item4){
+void printOLED(String item1, int item2, String item3){
   myOLED.clrScr();
   myOLED.print(item1, CENTER, 0);
   myOLED.print(String(item2) + "%", CENTER, 16);
   myOLED.print(item3, CENTER, 32);
-  myOLED.print(String(item4) + " ms", CENTER, 48);
+  //myOLED.print(String(item4) + " ms", CENTER, 48);
   myOLED.update();
 }
