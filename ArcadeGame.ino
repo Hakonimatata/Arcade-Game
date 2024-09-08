@@ -5,7 +5,6 @@ extern uint8_t SmallFont[];
 OLED myOLED(SDA, SCL); // Init oled screen
 Servo hammer; // Init servo object
 
-// Hei
 // pins:
 const int buttonPin = 6;
 const int servoPin = 9;
