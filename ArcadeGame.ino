@@ -1,5 +1,7 @@
 #include <Servo.h>
 #include <OLED_I2C.h>
+#include <CapacitiveSensor.h>
+
 extern uint8_t SmallFont[];
 
 OLED myOLED(SDA, SCL); // Init oled screen
@@ -11,20 +13,40 @@ const int servoPin = 9;
 const int potentiometerPin = A0;
 const int minStartAngle = 0;
 const int maxStartAngle = 90;
+const int touchPin_1 = 2;
+const int touchPin_2 = 3;
+const int greenLedPin = 4;
+const int redLedPin = 5;
 
-// tunable parameters: 
+// Hammer parameters
 int hammerStartPos = 0; // deg angle
-int hammerEndPos = 110;
+int hammerEndPos = 100;
 
+// init variables
 bool hammerDown = false;
+bool playerHit = false;
 bool playerFooled = false;
 unsigned long randNumber;
 unsigned long swingTime;
 unsigned long reactionTime;
 unsigned long bestReactionTime = 999999;
 
+
+// Capacitive sensor parameters
+const int numReadings  = 10;
+long readings [numReadings];
+int readIndex  = 0;
+long total  = 0;
+const int sensitivity  = 1000;
+const int thresh  = 250;
+const int csStep  = 10000;
+CapacitiveSensor cs  = CapacitiveSensor(touchPin_1, touchPin_2);
+
+
 void setup() {
   Serial.begin(9600);
+  pinMode(redLedPin, OUTPUT);
+  pinMode(greenLedPin, OUTPUT);
 
   pinMode(buttonPin, INPUT_PULLUP);
 
@@ -34,14 +56,25 @@ void setup() {
 
   myOLED.begin();
   myOLED.setFont(SmallFont);
+
+  //Init capacitive sensor
+  
+  cs.set_CS_AutocaL_Millis(0xFFFFFFFF);
+  
 }
 
 
 void loop() {
+
+  // while (true) {
+  //   long touchValue = cs.capacitiveSensor(sensitivity);
+  //   Serial.println(touchValue);
+  // }
+
   // Wait for player to start
   waitForPlayer();
 
-  // Game starts. TODO: green LED when starting?
+  // Game starts. 
   playGame();
 
   // Update high score
@@ -49,7 +82,7 @@ void loop() {
 
   // Game is done. Print results
   printResults();
-  delay(1000);
+  delay(5000); // Print result for this amount of time
 
   // Reset all parameters
   resetGame();
@@ -57,21 +90,31 @@ void loop() {
 }
 
 void waitForPlayer() {
+
+  String diff = "";
+
   while (!isButtonDown()) { // Wait for button to be pressed
     hammerStartPos = readPotentiometerPosition();
     hammer.write(hammerStartPos);
 
-    printOLED("Difficulty (degrees): ", String(hammerStartPos), "Hold button to start", "");
+    if      (hammerStartPos < 30) { diff = "Easy   "; }
+    else if (hammerStartPos < 50) { diff = "Hard   "; }
+    else if (hammerStartPos < 65) { diff = "Brutal "; }
+    else { diff = "Insane "; }
+
+    printOLED("Difficulty: ", diff + String(hammerStartPos) + " deg.", "Hold button to play", "Best: " + String(bestReactionTime) + " ms");
 
     delay(10);
   }
 }
 
+
 void playGame() {
 
   printOLED("Game started", "", "", "");
-
+  digitalWrite(greenLedPin, HIGH); // green LED when starting
   Serial.println("Starting Game");
+
   delay(1000); // delay before the hammer has a chance to start
 
   while(true) {
@@ -89,22 +132,54 @@ void playGame() {
     
     // Check if button is released
     if(!isButtonDown() && !hammerDown) { // button released when hammer is still up
-        playerFooled = true;
-        break;
+      playerFooled = true;
+      
+      // Red light only
+      digitalWrite(redLedPin, HIGH);
+      digitalWrite(greenLedPin, LOW);
+
+      break;
     }
     else if(hammerDown && isButtonDown) { // Hammer swings, button still down
       // update reaction time
       reactionTime = millis() - swingTime;
       
-      if (!isButtonDown()) break; // break when button is released
+      if (!isButtonDown()) { // button released 
+        break; // break when button is released
+      } 
     }
-
+    
     delay(1); 
+  }
+
+  if (!playerFooled) {
+    checkForHit();
+  }
+}
+
+void checkForHit() {
+  long startTime = millis();
+
+  // Check if finger got hit
+  while (millis() - startTime < 1000) { // check for one second
+    long touchValue = cs.capacitiveSensor(sensitivity);
+    Serial.println(touchValue);
+
+    if(touchValue > thresh) {
+      // Player got hit
+      playerHit = true;
+      Serial.println("Player hit");
+
+      // Red light only
+      digitalWrite(redLedPin, HIGH);
+      digitalWrite(greenLedPin, LOW);
+
+    }
   }
 }
 
 void updateHighScore() {
-  if (reactionTime < bestReactionTime) {
+  if (reactionTime < bestReactionTime && !playerFooled && !playerHit) {
     bestReactionTime = reactionTime;
   }
 }
@@ -113,11 +188,19 @@ void printResults() {
   Serial.println("Game over");
 
   if(playerFooled) {
-    printOLED("You got fooled!", "dumbass", "", "");
-    
+    printOLED("You got fooled!", "", "DUMBASS", "");
     Serial.println("You got fooled!");
-  } else {
-    printOLED("Your reaction time is", String(reactionTime) + "ms", "", "Best time: " + String(bestReactionTime) + " ms");
+  }
+  else if (playerHit) {
+    String msg1 = "";
+    String msg2 = "";
+    if (hammerStartPos < 30) {msg1 = "come on.."; msg2 = "even on easy??";}
+    printOLED("", "You got hit", msg1, msg2);
+  }
+  else {
+    String msg = "";
+    if (reactionTime == bestReactionTime) {msg = "NEW BEST TIME!";}
+    printOLED(msg, "Your time: " + String(reactionTime) + "ms", "", "Best time: " + String(bestReactionTime) + " ms");
 
     Serial.print("Reaction Time: ");
     Serial.print(reactionTime);
@@ -130,10 +213,15 @@ void resetGame() {
   // Return hammer to start pos
   hammer.write(hammerStartPos);
 
+  // Turn off lights
+  digitalWrite(greenLedPin, LOW);
+  digitalWrite(redLedPin, LOW);
+
   // Reset parameters
   hammerDown = false;
   playerFooled = false;
-  reactionTime = 0;
+  reactionTime = 99999;
+  playerHit = false;
 }
 
 
@@ -173,3 +261,5 @@ void printOLED(String item1, String item2, String item3, String item4){
   myOLED.print(item4, CENTER, 48);
   myOLED.update();
 }
+
+
